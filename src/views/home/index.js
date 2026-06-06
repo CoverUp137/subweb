@@ -32,6 +32,9 @@ const getSubLink = function (urls, api, target, remoteConfig, isShowMoreConfig, 
     } else {
       finalUrl = finalUrl + '&scv=false';
     }
+    if (moreConfig.expand) {
+      finalUrl = finalUrl + '&expand=true';
+    }
     if (moreConfig.list) {
       finalUrl = finalUrl + '&list=true';
     } else {

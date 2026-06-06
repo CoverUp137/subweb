@@ -42,6 +42,16 @@
             <option value="manual">自定义后端 API 地址</option>
           </select>
         </div>
+        <div
+          v-if="backendProbe.state !== 'idle'"
+          class="backend-status"
+          :class="`is-${backendProbe.state}`"
+          role="status"
+          aria-live="polite"
+        >
+          <span class="backend-status-dot" aria-hidden="true"></span>
+          <span>{{ backendProbeText }}</span>
+        </div>
       </div>
     </div>
 
@@ -110,7 +120,12 @@
         <label class="check-chip" for="scv">
           <input id="scv" v-model="moreConfig.scv" type="checkbox" />
           <span class="check-mark"></span>
-          关闭证书检查
+          跳过证书验证
+        </label>
+        <label class="check-chip" for="expand" title="将规则集内联展开到生成的配置中">
+          <input id="expand" v-model="moreConfig.expand" type="checkbox" />
+          <span class="check-mark"></span>
+          使用规则集
         </label>
         <label class="check-chip" for="nodelist">
           <input id="nodelist" v-model="moreConfig.list" type="checkbox" />
@@ -172,6 +187,7 @@ export default {
       udp: true,
       sort: false,
       scv: false,
+      expand: false,
       list: false,
     };
     return {
@@ -214,6 +230,12 @@ export default {
       target: 'clash',
       remoteConfig: window.config.remoteConfigOptions?.[0]?.value || '',
       isShortUrlLoading: false,
+      backendProbe: {
+        state: 'idle',
+        version: '',
+      },
+      backendProbeController: null,
+      backendProbeRequestId: 0,
     };
   },
   computed: {
@@ -223,9 +245,25 @@ export default {
     targetLabel() {
       return this.targetOptions.find((option) => option.value === this.target)?.text || this.target;
     },
+    backendProbeText() {
+      if (this.backendProbe.state === 'checking') {
+        return '正在探测后端';
+      }
+      if (this.backendProbe.state === 'online') {
+        return `在线 · ${this.backendProbe.version || '版本未知'}`;
+      }
+      return '离线或无法访问';
+    },
   },
   created() {
     this.initBackendOptions();
+    if (this.api) {
+      this.probeBackend(this.api);
+    }
+  },
+  beforeUnmount() {
+    this.backendProbeRequestId += 1;
+    this.cancelBackendProbe();
   },
   methods: {
     initBackendOptions() {
@@ -238,13 +276,74 @@ export default {
     showMoreConfig() {
       this.isShowMoreConfig = !this.isShowMoreConfig;
     },
+    cancelBackendProbe() {
+      if (this.backendProbeController) {
+        this.backendProbeController.abort();
+        this.backendProbeController = null;
+      }
+    },
+    resetBackendProbe() {
+      this.cancelBackendProbe();
+      this.backendProbeRequestId += 1;
+      this.backendProbe = {
+        state: 'idle',
+        version: '',
+      };
+    },
+    async probeBackend(api) {
+      this.cancelBackendProbe();
+      const normalizedApi = api.replace(/\/+$/, '');
+      const requestId = this.backendProbeRequestId + 1;
+      const controller = new AbortController();
+      this.backendProbeRequestId = requestId;
+      this.backendProbeController = controller;
+      this.backendProbe = {
+        state: 'checking',
+        version: '',
+      };
+      const timeoutId = window.setTimeout(() => controller.abort(), 5000);
+
+      try {
+        const response = await fetch(`${normalizedApi}/version`, {
+          signal: controller.signal,
+        });
+        if (!response.ok) {
+          throw new Error(`Backend returned HTTP ${response.status}`);
+        }
+
+        const body = (await response.text()).trim();
+        const versionMatch = body.match(/^SubConverter-Extended\s+(\S+)\s+backend$/i);
+        if (requestId !== this.backendProbeRequestId) {
+          return;
+        }
+        this.backendProbe = {
+          state: 'online',
+          version: versionMatch?.[1] || '',
+        };
+      } catch {
+        if (requestId !== this.backendProbeRequestId) {
+          return;
+        }
+        this.backendProbe = {
+          state: 'offline',
+          version: '',
+        };
+      } finally {
+        window.clearTimeout(timeoutId);
+        if (this.backendProbeController === controller) {
+          this.backendProbeController = null;
+        }
+      }
+    },
     selectApi(event) {
       if (event.target.value === 'manual') {
         this.api = '';
         this.isShowManualApiUrl = true;
+        this.resetBackendProbe();
       } else {
         this.isShowManualApiUrl = false;
         this.api = event.target.value;
+        this.probeBackend(this.api);
       }
     },
     selectRemoteConfig(event) {
@@ -415,6 +514,40 @@ export default {
   color: var(--text-muted);
   font-size: 0.78rem;
   line-height: 1.45;
+}
+
+.backend-status {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.backend-status-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  background: currentColor;
+  border-radius: 50%;
+}
+
+.backend-status.is-checking {
+  color: var(--accent-blue);
+}
+
+.backend-status.is-checking .backend-status-dot {
+  animation: status-pulse 1s ease-in-out infinite;
+}
+
+.backend-status.is-online {
+  color: var(--success);
+}
+
+.backend-status.is-offline {
+  color: var(--danger);
 }
 
 input,
@@ -707,6 +840,12 @@ select {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes status-pulse {
+  50% {
+    opacity: 0.35;
   }
 }
 
