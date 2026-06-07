@@ -250,7 +250,7 @@ export default {
         return '正在探测后端';
       }
       if (this.backendProbe.state === 'online') {
-        return `在线 · ${this.backendProbe.version || '版本未知'}`;
+        return `在线 · ${this.backendProbe.version}`;
       }
       return '离线或无法访问';
     },
@@ -312,13 +312,15 @@ export default {
         }
 
         const body = (await response.text()).trim();
-        const versionMatch = body.match(/^SubConverter-Extended\s+(\S+)\s+backend$/i);
+        if (!body) {
+          throw new Error('Backend returned an empty version response');
+        }
         if (requestId !== this.backendProbeRequestId) {
           return;
         }
         this.backendProbe = {
           state: 'online',
-          version: versionMatch?.[1] || '',
+          version: body,
         };
       } catch {
         if (requestId !== this.backendProbeRequestId) {
@@ -519,11 +521,18 @@ export default {
 .backend-status {
   display: inline-flex;
   width: fit-content;
+  max-width: 100%;
   align-items: center;
   gap: 7px;
   color: var(--text-muted);
   font-size: 0.76rem;
   font-weight: 700;
+}
+
+.backend-status span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 
 .backend-status-dot {
