@@ -42,16 +42,16 @@
             <option value="manual">自定义后端 API 地址</option>
           </select>
         </div>
-        <div
-          v-if="backendProbe.state !== 'idle'"
-          class="backend-status"
-          :class="`is-${backendProbe.state}`"
-          role="status"
-          aria-live="polite"
-        >
-          <span class="backend-status-dot" aria-hidden="true"></span>
-          <span>{{ backendProbeText }}</span>
-        </div>
+      </div>
+      <div
+        v-if="backendProbe.state !== 'idle'"
+        class="backend-status"
+        :class="`is-${backendProbe.state}`"
+        role="status"
+        aria-live="polite"
+      >
+        <span class="backend-status-dot" aria-hidden="true"></span>
+        <span>{{ backendProbeText }}</span>
       </div>
     </div>
 
@@ -68,6 +68,7 @@
             <option v-for="option in remoteConfigOptions" :key="`${option.text}-${option.value}`" :value="option.value">
               {{ option.text }}
             </option>
+            <option value="">不使用远程配置</option>
             <option value="manual">自定义远程配置地址</option>
           </select>
         </div>
@@ -91,47 +92,101 @@
     </div>
 
     <section v-if="isShowMoreConfig" class="options-panel reveal-block" aria-label="可选参数">
-      <div class="options-inputs">
-        <div class="field">
-          <label for="include">Include</label>
-          <input id="include" v-model="moreConfig.include" placeholder="仅保留匹配节点，可选" />
+      <div class="options-section">
+        <div class="options-heading">
+          <h3>文本参数</h3>
+          <span>留空即使用后端默认值</span>
         </div>
-        <div class="field">
-          <label for="exclude">Exclude</label>
-          <input id="exclude" v-model="moreConfig.exclude" placeholder="排除匹配节点，可选" />
+        <div class="options-inputs">
+          <div class="field">
+            <label for="include">Include</label>
+            <input id="include" v-model="moreConfig.include" placeholder="仅保留匹配节点" />
+          </div>
+          <div class="field">
+            <label for="exclude">Exclude</label>
+            <input id="exclude" v-model="moreConfig.exclude" placeholder="排除匹配节点" />
+          </div>
+          <div class="field">
+            <label for="group">节点分组名</label>
+            <input id="group" v-model="moreConfig.group" placeholder="覆盖直接节点的分组名" />
+          </div>
+          <div class="field">
+            <label for="filename">下载文件名</label>
+            <input id="filename" v-model="moreConfig.filename" placeholder="例如 profile.yaml" />
+          </div>
+          <div class="field">
+            <label for="interval">更新间隔</label>
+            <input id="interval" v-model="moreConfig.interval" type="number" min="0" placeholder="秒" />
+          </div>
+          <div class="field">
+            <label for="dev-id">Quantumult X 设备 ID</label>
+            <input id="dev-id" v-model="moreConfig.dev_id" placeholder="dev_id" />
+          </div>
         </div>
       </div>
-      <div class="check-grid">
-        <label class="check-chip" for="emoji">
-          <input id="emoji" v-model="moreConfig.emoji" type="checkbox" />
-          <span class="check-mark"></span>
-          Emoji
-        </label>
-        <label class="check-chip" for="udp">
-          <input id="udp" v-model="moreConfig.udp" type="checkbox" />
-          <span class="check-mark"></span>
-          开启 UDP
-        </label>
-        <label class="check-chip" for="sort">
-          <input id="sort" v-model="moreConfig.sort" type="checkbox" />
-          <span class="check-mark"></span>
-          排序节点
-        </label>
-        <label class="check-chip" for="scv">
-          <input id="scv" v-model="moreConfig.scv" type="checkbox" />
-          <span class="check-mark"></span>
-          跳过证书验证
-        </label>
-        <label class="check-chip" for="expand" title="将规则集内联展开到生成的配置中">
-          <input id="expand" v-model="moreConfig.expand" type="checkbox" />
-          <span class="check-mark"></span>
-          使用规则集
-        </label>
-        <label class="check-chip" for="nodelist">
-          <input id="nodelist" v-model="moreConfig.list" type="checkbox" />
-          <span class="check-mark"></span>
-          Node List
-        </label>
+
+      <div class="options-section">
+        <div class="options-heading">
+          <h3>自定义规则与分组</h3>
+          <span>自动编码为 URL-safe Base64；远程配置加载成功时后端会忽略此处内容</span>
+        </div>
+        <div class="advanced-inputs">
+          <div class="field">
+            <label for="rename">节点重命名规则</label>
+            <textarea
+              id="rename"
+              v-model="moreConfig.rename"
+              rows="2"
+              placeholder="正则@替换，多个规则使用 ` 分隔"
+            ></textarea>
+          </div>
+          <div class="field">
+            <label for="groups">自定义代理组</label>
+            <textarea
+              id="groups"
+              v-model="moreConfig.groups"
+              rows="2"
+              placeholder="custom_proxy_group=...，多个项目使用 @ 分隔"
+            ></textarea>
+          </div>
+          <div class="field">
+            <label for="ruleset">自定义规则集</label>
+            <textarea
+              id="ruleset"
+              v-model="moreConfig.ruleset"
+              rows="2"
+              placeholder="ruleset=...，多个项目使用 @ 分隔"
+            ></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="options-section">
+        <div class="options-heading">
+          <h3>行为开关</h3>
+          <span>三态设置可显式开启、关闭或跟随后端</span>
+        </div>
+        <div class="toggle-grid">
+          <div
+            v-for="option in booleanParameters"
+            :key="option.key"
+            class="toggle-field"
+            :class="{ 'is-disabled': isEmojiDetailDisabled(option.key) }"
+          >
+            <label :for="`option-${option.key}`" :title="option.hint">{{ option.label }}</label>
+            <div class="select-wrap compact-select">
+              <select
+                :id="`option-${option.key}`"
+                v-model="moreConfig[option.key]"
+                :disabled="isEmojiDetailDisabled(option.key)"
+              >
+                <option value="">后端默认</option>
+                <option value="true">开启</option>
+                <option value="false">关闭</option>
+              </select>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -183,14 +238,60 @@ export default {
     const DEFAULT_MORECONFIG = {
       include: '',
       exclude: '',
-      emoji: true,
-      udp: true,
-      sort: false,
-      scv: false,
-      expand: false,
-      list: false,
+      group: '',
+      filename: '',
+      interval: '',
+      dev_id: '',
+      rename: '',
+      groups: '',
+      ruleset: '',
+      emoji: '',
+      add_emoji: '',
+      remove_emoji: '',
+      append_type: '',
+      tfo: '',
+      udp: '',
+      list: '',
+      sort: '',
+      sort_script: '',
+      script: '',
+      insert: '',
+      scv: '',
+      fdn: '',
+      expand: '',
+      append_info: '',
+      prepend: '',
+      classic: '',
+      tls13: '',
+      provider_proxy_direct: '',
+      new_name: '',
+      strict: '',
     };
+    const booleanParameters = [
+      { key: 'emoji', label: 'Emoji', hint: '同时控制添加 Emoji 和移除旧 Emoji' },
+      { key: 'add_emoji', label: '添加 Emoji', hint: '单独控制添加 Emoji' },
+      { key: 'remove_emoji', label: '移除旧 Emoji', hint: '单独控制移除已有 Emoji' },
+      { key: 'append_type', label: '追加节点类型', hint: '在节点名后追加协议类型' },
+      { key: 'tfo', label: 'TCP Fast Open', hint: '启用 TCP Fast Open' },
+      { key: 'udp', label: 'UDP', hint: '启用 UDP 转发' },
+      { key: 'list', label: 'Node List', hint: '生成节点列表；Extended 会强制使用 Provider 模式' },
+      { key: 'sort', label: '排序节点', hint: '按后端规则排序节点' },
+      { key: 'sort_script', label: '使用排序脚本', hint: '使用后端配置的排序脚本' },
+      { key: 'script', label: 'Clash Script', hint: '生成 Clash Script 配置' },
+      { key: 'insert', label: '插入预设节点', hint: '插入后端预先配置的节点' },
+      { key: 'scv', label: '跳过证书验证', hint: '为支持的节点跳过 TLS 证书验证' },
+      { key: 'fdn', label: '过滤废弃节点', hint: '过滤后端识别的废弃节点' },
+      { key: 'expand', label: '使用规则集', hint: '将规则集内联展开到生成配置' },
+      { key: 'append_info', label: '追加订阅信息', hint: '在响应中追加订阅流量信息' },
+      { key: 'prepend', label: '前置插入节点', hint: '将后端预设节点插入到最前面' },
+      { key: 'classic', label: 'Classical 规则', hint: '使用 Classical rule-provider 格式' },
+      { key: 'tls13', label: 'TLS 1.3', hint: '为支持的节点启用 TLS 1.3' },
+      { key: 'provider_proxy_direct', label: 'Provider 直连', hint: '规则 Provider 使用直连策略' },
+      { key: 'new_name', label: 'Mihomo 新字段', hint: '使用 proxies、proxy-groups 等新字段名' },
+      { key: 'strict', label: '严格更新', hint: '启用托管配置严格更新模式' },
+    ];
     return {
+      booleanParameters,
       DEFAULT_MORECONFIG,
     };
   },
@@ -265,6 +366,14 @@ export default {
     this.backendProbeRequestId += 1;
     this.cancelBackendProbe();
   },
+  watch: {
+    'moreConfig.emoji'(value) {
+      if (value) {
+        this.moreConfig.add_emoji = '';
+        this.moreConfig.remove_emoji = '';
+      }
+    },
+  },
   methods: {
     initBackendOptions() {
       const { apiBackends } = window.config;
@@ -275,6 +384,9 @@ export default {
     },
     showMoreConfig() {
       this.isShowMoreConfig = !this.isShowMoreConfig;
+    },
+    isEmojiDetailDisabled(key) {
+      return (key === 'add_emoji' || key === 'remove_emoji') && this.moreConfig.emoji !== '';
     },
     cancelBackendProbe() {
       if (this.backendProbeController) {
@@ -499,9 +611,14 @@ export default {
   gap: 16px;
 }
 
+.field-grid {
+  align-items: start;
+}
+
 .field {
   display: grid;
   min-width: 0;
+  align-content: start;
   gap: 8px;
 }
 
@@ -522,8 +639,10 @@ export default {
   display: inline-flex;
   width: fit-content;
   max-width: 100%;
+  grid-column: 2;
   align-items: center;
   gap: 7px;
+  margin-top: -8px;
   color: var(--text-muted);
   font-size: 0.76rem;
   font-weight: 700;
@@ -693,79 +812,81 @@ select {
 
 .options-panel {
   display: grid;
-  gap: 17px;
+  gap: 22px;
   padding: 18px;
   background: var(--surface-soft);
   border: 1px solid var(--inner-border);
   border-radius: 22px;
 }
 
-.check-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 9px;
-}
-
-.check-chip {
-  display: inline-flex;
-  min-height: 39px;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  color: var(--text-secondary);
-  font-size: 0.8rem;
-  font-weight: 700;
-  cursor: pointer;
-  background: var(--control-bg);
-  border: 1px solid var(--control-border);
-  border-radius: 999px;
-  transition:
-    color 0.2s ease,
-    background 0.2s ease,
-    border-color 0.2s ease;
-}
-
-.check-chip:has(input:checked) {
-  color: var(--text-primary);
-  background: var(--accent-soft);
-  border-color: color-mix(in srgb, var(--accent-blue) 34%, transparent);
-}
-
-.check-chip input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  min-height: 0;
-  opacity: 0;
-}
-
-.check-mark {
+.options-section {
   display: grid;
-  width: 17px;
-  height: 17px;
-  flex: 0 0 auto;
-  place-items: center;
-  border: 1.5px solid var(--control-border);
-  border-radius: 5px;
+  gap: 14px;
 }
 
-.check-chip input:checked + .check-mark {
-  background: var(--accent-gradient);
-  border-color: transparent;
+.options-section + .options-section {
+  padding-top: 20px;
+  border-top: 1px solid var(--inner-border);
 }
 
-.check-chip input:checked + .check-mark::after {
-  width: 7px;
-  height: 4px;
-  border-bottom: 2px solid #fff;
-  border-left: 2px solid #fff;
-  content: '';
-  transform: translateY(-1px) rotate(-45deg);
+.options-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
 }
 
-.check-chip:has(input:focus-visible) {
-  outline: 3px solid var(--focus-ring);
-  outline-offset: 2px;
+.options-heading h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 0.94rem;
+}
+
+.options-heading span {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  line-height: 1.4;
+  text-align: right;
+}
+
+.advanced-inputs {
+  display: grid;
+  gap: 14px;
+}
+
+.advanced-inputs textarea {
+  min-height: 82px;
+}
+
+.toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.toggle-field {
+  display: grid;
+  min-width: 0;
+  gap: 7px;
+}
+
+.toggle-field label {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toggle-field.is-disabled {
+  opacity: 0.48;
+}
+
+.compact-select select {
+  min-height: 42px;
+  padding-left: 12px;
+  font-size: 0.8rem;
 }
 
 .section-divider {
@@ -876,6 +997,24 @@ select {
     grid-template-columns: 1fr;
   }
 
+  .backend-status {
+    grid-column: 1;
+  }
+
+  .toggle-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .options-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .options-heading span {
+    text-align: left;
+  }
+
   .parameter-button,
   .result-group button {
     width: 100%;
@@ -888,14 +1027,8 @@ select {
 }
 
 @media (max-width: 420px) {
-  .check-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .check-chip {
-    justify-content: flex-start;
-    padding-inline: 10px;
+  .toggle-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

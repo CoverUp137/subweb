@@ -1,47 +1,75 @@
+const TEXT_PARAMETERS = ['include', 'exclude', 'group', 'filename', 'interval', 'dev_id', 'rename'];
+const BASE64_PARAMETERS = ['groups', 'ruleset'];
+const BOOLEAN_PARAMETERS = [
+  'emoji',
+  'add_emoji',
+  'remove_emoji',
+  'append_type',
+  'tfo',
+  'udp',
+  'list',
+  'sort',
+  'sort_script',
+  'script',
+  'insert',
+  'scv',
+  'fdn',
+  'expand',
+  'append_info',
+  'prepend',
+  'classic',
+  'tls13',
+  'provider_proxy_direct',
+  'new_name',
+  'strict',
+];
+
+const toUrlSafeBase64 = function (value) {
+  const bytes = new TextEncoder().encode(value);
+  let binary = '';
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+};
+
 const getSubLink = function (urls, api, target, remoteConfig, isShowMoreConfig, moreConfig) {
-  let linkLst = urls.split('\n');
-  let link = linkLst.join('|');
-  let finalUrl = api + '/sub?target=' + target + '&url=' + encodeURIComponent(link);
+  const params = new URLSearchParams();
+  const [targetName, ...targetArguments] = target.split('&');
+  params.set('target', targetName);
+  for (const argument of targetArguments) {
+    const [name, value = ''] = argument.split('=');
+    if (name) {
+      params.set(name, value);
+    }
+  }
+  params.set('url', urls.split('\n').join('|'));
   if (remoteConfig) {
-    finalUrl = finalUrl + '&config=' + encodeURIComponent(remoteConfig);
+    params.set('config', remoteConfig);
   }
+
   if (isShowMoreConfig) {
-    if (moreConfig.include != '') {
-      finalUrl = finalUrl + '&include=' + encodeURIComponent(moreConfig.include);
+    for (const name of TEXT_PARAMETERS) {
+      const value = String(moreConfig[name] ?? '').trim();
+      if (value) {
+        params.set(name, value);
+      }
     }
-    if (moreConfig.exclude != '') {
-      finalUrl = finalUrl + '&exclude=' + encodeURIComponent(moreConfig.exclude);
+    for (const name of BASE64_PARAMETERS) {
+      const value = String(moreConfig[name] ?? '').trim();
+      if (value) {
+        params.set(name, toUrlSafeBase64(value));
+      }
     }
-    if (moreConfig.emoji) {
-      finalUrl = finalUrl + '&emoji=true';
-    } else {
-      finalUrl = finalUrl + '&emoji=false';
-    }
-    if (moreConfig.udp) {
-      finalUrl = finalUrl + '&udp=true';
-    } else {
-      finalUrl = finalUrl + '&udp=false';
-    }
-    if (moreConfig.sort) {
-      finalUrl = finalUrl + '&sort=true';
-    } else {
-      finalUrl = finalUrl + '&sort=false';
-    }
-    if (moreConfig.scv) {
-      finalUrl = finalUrl + '&scv=true';
-    } else {
-      finalUrl = finalUrl + '&scv=false';
-    }
-    if (moreConfig.expand) {
-      finalUrl = finalUrl + '&expand=true';
-    }
-    if (moreConfig.list) {
-      finalUrl = finalUrl + '&list=true';
-    } else {
-      finalUrl = finalUrl + '&list=false';
+    for (const name of BOOLEAN_PARAMETERS) {
+      const value = moreConfig[name];
+      if (value === 'true' || value === 'false') {
+        params.set(name, value);
+      }
     }
   }
-  return finalUrl;
+
+  return `${api}/sub?${params.toString()}`;
 };
 
 const regexCheck = function (url) {

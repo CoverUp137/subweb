@@ -1,5 +1,6 @@
 :root {
   color-scheme: light dark;
+  --content-width: 1040px;
   --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #eef2f7 48%, #e2e8f0 100%);
   --bg-grid: rgba(15, 23, 42, 0.055);
   --bg-sheen: linear-gradient(

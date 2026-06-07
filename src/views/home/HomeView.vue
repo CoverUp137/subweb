@@ -26,7 +26,7 @@ export default {
 
 <style scoped>
 .home-page {
-  width: min(1040px, calc(100% - 40px));
+  width: min(var(--content-width), calc(100% - 40px));
   margin: 0 auto;
   padding: 64px 0 12px;
 }
@@ -103,7 +103,7 @@ export default {
 
 @media (max-width: 720px) {
   .home-page {
-    width: min(100% - 20px, 1040px);
+    width: min(100% - 20px, var(--content-width));
     padding-top: 42px;
   }
 

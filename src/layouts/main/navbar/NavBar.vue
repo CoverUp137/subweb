@@ -37,7 +37,7 @@ export default {
 
 .topbar {
   display: flex;
-  width: min(1120px, 100%);
+  width: min(var(--content-width), 100%);
   min-height: 64px;
   align-items: center;
   justify-content: space-between;
